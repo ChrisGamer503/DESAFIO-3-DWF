@@ -1,51 +1,74 @@
-// context/AuthContext.jsx
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
-const API_URL = "http://localhost:8080/api/auth"; // Ajusta tu URL del backend
+const API_URL = "http://localhost:8080/api/auth"; 
+const TOKEN_KEY = 'jwt_token'; 
+const USER_KEY = 'user_data'; 
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user')));
 
-  const login = async (email, password) => {
-    try {
-      const response = await axios.post(`${API_URL}/login`, { email, password });
-      const { token, email: userEmail, role } = response.data;      
-      
-      localStorage.setItem('token', token);      
-      setUser({ email: userEmail, role: role }); 
-      localStorage.setItem('userRole', role);
-      setAuthenticated(true);
+    const [user, setUser] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
 
-    } catch (error) {
-      console.error("Login failed", error);
-      throw error; 
+    const getAuthToken = () => localStorage.getItem(TOKEN_KEY);
+
+    useEffect(() => {
+        const loadInitialUser = () => {
+            const token = getAuthToken();
+            const userData = JSON.parse(localStorage.getItem(USER_KEY));
+
+            if (token && userData) {
+                setUser(userData);
+            }
+            setIsLoading(false);
+        };
+
+        loadInitialUser();
+    }, []);
+
+    const login = async (email, password) => {
+        try {
+            const response = await axios.post(`${API_URL}/login`, { email, password });
+            
+            const { token, email: userEmail, role } = response.data;
+            
+            const newUser = { email: userEmail, role: role };
+
+            localStorage.setItem(TOKEN_KEY, token);
+            localStorage.setItem(USER_KEY, JSON.stringify(newUser));
+            
+            setUser(newUser);
+            return true; 
+
+        } catch (error) {
+            console.error("Login failed", error);
+            throw error; 
+        }
+    };
+
+    const logout = () => {
+        localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(USER_KEY);
+        setUser(null);
+    };
+
+    const value = {
+        user,
+        login,
+        logout,
+        isLoading,
+        isAuthenticated: !!user, 
+        getAuthToken, 
+    };
+
+    if (isLoading) {
+        return <div style={{ textAlign: 'center', padding: '50px' }}>Cargando aplicación...</div>;
     }
-  };
 
-  loadUserFromLocalStorage = () => {
-    const token = localStorage.getItem('token');
-    const userRole = localStorage.getItem('userRole'); // 👈 Leer el rol
-    const userEmail = localStorage.getItem('userEmail'); // Si lo guardaste al inicio
-    
-    if (token && userEmail && userRole) {
-        setAuthenticated(true);
-        // Cargar el rol en el estado
-        setUser({ email: userEmail, role: userRole }); 
-    }
-};
-
-  const logout = () => {
-    localStorage.removeItem('user');
-    setUser(null);
-  };
-  
-  const value = { user, login, logout, isAuthenticated: !!user };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
-  return useContext(AuthContext);
+    return useContext(AuthContext);
 };

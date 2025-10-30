@@ -1,4 +1,3 @@
-// main.jsx (o index.js)
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
@@ -9,7 +8,6 @@ import ProtectedRoute from './components/ProtectedRoute.jsx';
 import HomePage from './pages/HomePage.jsx'; 
 import NoAuthRoute from './components/NoAuthRoute.jsx';
 
-// 1. Define las rutas
 const router = createBrowserRouter([
   {
     element: <NoAuthRoute/>,
@@ -22,15 +20,15 @@ const router = createBrowserRouter([
     
   },
   {
-    element: <ProtectedRoute />, // Este elemento aplica la protección
+    element: <ProtectedRoute />, 
     children: [
       {
         path: '/',
-        element: <App />, // App.jsx contendrá el layout/contenido principal
+        element: <App />,
       },
       {
         path: '/dashboard',
-        element: <HomePage />, // Ejemplo de una sub-página protegida
+        element: <HomePage />,
       },
     ],
   },

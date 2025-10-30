@@ -2,33 +2,33 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 
-// Usamos el endpoint personal que creamos en el backend
-const API_URL = 'http://localhost:8080/api/subscriptions/my'; 
-const CREATE_URL = 'http://localhost:8080/api/subscriptions';
+const API_URL = 'http://localhost:8080/api/subscriptions'; 
 
 export const useSubscriptions = () => {
-    const { isAuthenticated, user, logout } = useAuth();
+    const { isAuthenticated, user, logout, getAuthToken } = useAuth(); 
     const [subscriptions, setSubscriptions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-
-    const token = localStorage.getItem('token');
     
-    const config = {
-        headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-        },
+    const getConfig = () => {
+        const token = getAuthToken();
+        return {
+            headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+        };
     };
 
-    // Función para obtener las suscripciones del usuario logueado
     const fetchMySubscriptions = async () => {
-        if (!isAuthenticated) return;
+        if (!isAuthenticated) {
+            setLoading(false);
+            return;
+        }
 
         setLoading(true);
         try {
-            // No enviamos userId, el backend lo obtiene del JWT
-            const response = await axios.get(API_URL, config);
+            const response = await axios.get(API_URL, getConfig());
             setSubscriptions(response.data);
             setError(null);
         } catch (err) {
@@ -37,31 +37,13 @@ export const useSubscriptions = () => {
                  setError('Error de sesión. Por favor, inicie sesión de nuevo.');
                  logout();
             } else {
-                 setError('Error al cargar sus suscripciones.');
+                 setError('Error al cargar sus suscripciones. Revisa la conexión con el backend.');
             }
         } finally {
             setLoading(false);
         }
     };
     
-    // Función para crear una nueva suscripción
-    const createSubscription = async (dto) => {
-        if (!isAuthenticated) return false;
-        
-        try {
-             const response = await axios.post(CREATE_URL, dto, config);
-             
-             // Agrega la nueva suscripción y recarga
-             setSubscriptions(prev => [...prev, response.data]);
-             return true;
-
-        } catch (err) {
-            console.error("Error creating subscription:", err);
-            setError(err.response?.data?.message || 'Fallo la creación de la suscripción.');
-            return false;
-        }
-    };
-
     useEffect(() => {
         if (isAuthenticated) {
             fetchMySubscriptions();
@@ -71,5 +53,6 @@ export const useSubscriptions = () => {
         }
     }, [isAuthenticated]);
 
-    return { subscriptions, loading, error, fetchMySubscriptions, createSubscription };
+    // Omitiendo createSubscription que no usa la vista principal
+    return { subscriptions, loading, error, fetchMySubscriptions };
 };
